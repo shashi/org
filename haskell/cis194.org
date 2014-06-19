@@ -58,4 +58,25 @@
 ** Instances with constraints.
   instance (Listable a, Listable b) => Listable (a,b) where
      toList (x,y) = toList x ++ toList y
-* Chapter 6: 
+* Chapter 6: Lazy evaluation
+** What's really at issue is side effects in languages that allow them
+   interactions become time-sensitive. Haskell designers wanted a lazy language
+   and soon realized that it would be impossible without making it pure as well.
+   "thunk" is an unevaled expression.
+** "pattern-matching drives evaluation"
+   Expressions are not evaluated until pattern matched. example:
+   take 3 (repeat 1) where
+   repeat x = x:repeat x; take n x:xs = x:(take (n-1) xs); take 0 _ = []; -- one more case.
+   GHC uses *graph reduction* to avoid reevaluating shared expressions
+
+** Consequences
+*** infinite data structures: game trees!!
+*** short-circuiting for free:
+        True && x = x
+        False && _ = False
+*** in cases such as foldl laziness is not desirable: it builds a humongous thunk and evaluates
+    at the end. Could lead to avoidable stack overflows.
+    
+*** wholemeal programming gets pipelined is efficient for large data structures.
+    Only things that are required for the next step get evaluated
+*** Dynamic programming!!
