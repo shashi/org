@@ -1,82 +1,117 @@
 * Chapter 3: Recursion and Polymorphism
-** Recursion and polymorphism is more natural with pattern matching
-** PM forces you to take care of all possibilities and boundary cases
-** ADTs should be used wherever possible to structure data and hence functions
-** head is a *partial function* because it doesn't work for some values in the domain. i.e. an empty list.
+- Recursion and polymorphism is more natural with pattern matching
+- Pattern matching forces you to take care of all possibilities and boundary cases
+- ADTs should be used wherever possible to structure data and hence functions
+- head is a *partial function* because it doesn't work for some values in the domain. i.e. an empty list.
 * Chapter 4: Higher order functions
-** All haskell functions are curried. i.e. they take 1 argument
-** Operator sections
-
+- All haskell functions are curried. i.e. they take 1 argument
+- Operator sections
    >100, 100> etc.
-
-** uncurrying means passing a tuple as the argument
-
+- uncurrying means passing a tuple as the argument
+  #+BEGIN_SRC haskell
    curry f a b = f (a, b)
    uncurry f (a, b) = f a b 
    zipWith f a b = map (uncurry f) (zip a b)
+  #+END_SRC
+- arguments should be ordered from "least to greatest variation" for best currying
+- wholemeal programming (parial application & function composition are key). "point-free"
 
-** arguments should be ordered from "least to greatest variation" for best currying
-** wholemeal programming (parial application & function composition are key) "point-free"
+  #+BEGIN_SRC haskell
+  foobar' :: [Integer] -> Integer
+  foobar' = sum . map (\x -> 7*x + 2) . filter (>3)
 
-   foobar' :: [Integer] -> Integer
-   foobar' = sum . map (\x -> 7*x + 2) . filter (>3)
-   ;; Instead of
-   foobar :: [Integer] -> Integer
-   foobar []     = 0
-   foobar (x:xs)
-       | x > 3     = (7*x + 2) + foobar xs ;; Guard conditions
-       | otherwise = foobar xs             ;; otherwise == False
+  foobar :: [Integer] -> Integer
+  foobar []     = 0
+  foobar (x:xs)
+     | x > 3     = (7*x + 2) + foobar xs -- Guard conditions
+     | otherwise = foobar xs             -- otherwise == False
+  #+END_SRC
 
-*** In general, however, you should use foldl' from Data.List
-     instead, which does the same thing as foldl but is more efficient.
-
+- foldl' is more efficient
 * Chapter 5: More polymorphism and typeclasses
-** *parametric polymorphism* is in Haskell
-   (works for any type chosen by the caller)
-   e.g. a -> a -> a has only 2 implementations:
+- *parametric polymorphism* (works for any type chosen by the caller)
+  e.g. a -> a -> a has only 2 implementations:
+
+  #+BEGIN_SRC haskell
    f1 x y = x
    f2 x y = y
-   parametricicty provides guarantees instead of restrictions
-** no reflection: because types get erased before runtime. e.g. typeof doesn't exist
-   #+TODO: read about Java generics
+  #+END_SRC
 
+  Parametricicty provides guarantees instead of restrictions.
+  Types say a lot about the implementation.
+- No reflection: because types don't exist at runtime. e.g. typeof doesn't exist
+- [ ] Read about Java generics
+- *type class polymorphic*
+  (==), (<), (+) are polymorphic for classes Eq, Ord and Num
+  syntax:
+  #+BEGIN_SRC
+  class Eq a where
+  (==) :: a -> a -> Bool
+  (/=) :: a -> a -> Bool
+  x /= y = not (x == y)
+  #+END_SRC
+  "Eq is a type class with the parameter a. Any type a which wants to be an instance
+  of Eq must define the functions (==) and (/=)"
+- Some type classes are special, they can be derived by the compiler
 
-
-
-** *type class polymorphic*
-   (==), (<), (+) are polymorphic for classes Eq, Ord and Num
-   syntax:
-   class Eq a where
-     (==) :: a -> a -> Bool
-     (/=) :: a -> a -> Bool
-     x /= y = not (x == y)
-   "Eq is a type class with the parameter a. Any type a which wants to be an instance
-    of Eq must define the functions (==) and (/=)"
-** Some type classes are special, they can be derived by the compiler
+  #+BEGIN_SRC haskell
    data Foo = F Int | C Char
      deriving (Eq, Ord, Show)
-** Instances with constraints.
+  #+END_SRC
+- Instances with constraints.
+
+  #+BEGIN_SRC haskell
   instance (Listable a, Listable b) => Listable (a,b) where
      toList (x,y) = toList x ++ toList y
+  #+END_SRC
 * Chapter 6: Lazy evaluation
-** What's really at issue is side effects in languages that allow them
+- What's really at issue is side effects in languages that allow them
    interactions become time-sensitive. Haskell designers wanted a lazy language
    and soon realized that it would be impossible without making it pure as well.
    "thunk" is an unevaled expression.
-** "pattern-matching drives evaluation"
+- "pattern-matching drives evaluation"
    Expressions are not evaluated until pattern matched. example:
+  #+BEGIN_SRC haskell
    take 3 (repeat 1) where
    repeat x = x:repeat x; take n x:xs = x:(take (n-1) xs); take 0 _ = []; -- one more case.
+  #+END_SRC
    GHC uses *graph reduction* to avoid reevaluating shared expressions
-
-** Consequences
-*** infinite data structures: game trees!!
-*** short-circuiting for free:
+  
+- Consequences
+  - infinite data structures: game trees!!
+  - short-circuiting for free:
         True && x = x
         False && _ = False
-*** in cases such as foldl laziness is not desirable: it builds a humongous thunk and evaluates
+  - in cases such as foldl laziness is not desirable: it builds a humongous thunk and evaluates
     at the end. Could lead to avoidable stack overflows.
     
-*** wholemeal programming gets pipelined is efficient for large data structures.
+  - wholemeal programming gets pipelined is efficient for large data structures.
     Only things that are required for the next step get evaluated
-*** Dynamic programming!!
+  - Dynamic programming!!
+* Chapter 7: Folds and Monoids
+- Fold can be implemented e.g. for Binary tree, Expression tree etc
+- Monoids help you fold with mconcat
+
+  #+BEGIN_SRC haskell
+   As an example
+      newtype Sum a
+        deriving (Show, Num, Eq, Ord)
+   -- (assuming Num is derivable, and + becomes available for Sum)
+   instance Monoid (Sum a) where
+       mempty  :: Sum a
+       mappend :: (+)
+  #+END_SRC
+
+   now to sum a list, you do:
+       =mconcat . map Sum $ lst=
+   What's interesting is that we have a monoid instance Sum a for summing up
+   we can define a monoid Product a for finding the product and Flat a for flattening.
+   The chapter doesn't really explain how the two subjects of the chapter are related
+* Chapter 8: IO
+- IO type
+  Values of type (IO a) are descriptions of effectful computations.
+  if they are executed they'd (possibly) do I/O and (eventually) produce a value of type a.
+  IO a is a *first-class imperative program*
+  Haskell runtime is the master chef that looks for and executes =main :: IO ()=
+- Is there a string inside an IO String?
+  There is no string inside an IO String any more than a cake is inside a cake recipe
